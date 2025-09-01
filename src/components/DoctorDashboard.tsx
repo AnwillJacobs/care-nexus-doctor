@@ -1,15 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, User, FileText, Calendar, Stethoscope, Clock, Phone, Mail } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import AddPatientDialog from "./AddPatientDialog";
-import CreatePrescriptionDialog from "./CreatePrescriptionDialog";
+import { Search, User, FileText, Calendar, Plus, Stethoscope, Clock, Phone, Mail } from "lucide-react";
 
 // Mock data
 const doctorProfile = {
@@ -86,62 +82,9 @@ const mockMedicalHistory = [
 
 const DoctorDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [patients, setPatients] = useState<any[]>([]);
-  const [medicalHistory, setMedicalHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchPatients();
-    fetchMedicalHistory();
-  }, []);
-
-  const fetchPatients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-      setPatients(data || []);
-    } catch (error) {
-      console.error("Error fetching patients:", error);
-      toast.error("Failed to load patients");
-    }
-  };
-
-  const fetchMedicalHistory = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("medical_history")
-        .select(`
-          *,
-          patients (name, patient_id),
-          doctors (name, doctor_id)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setMedicalHistory(data || []);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching medical history:", error);
-      toast.error("Failed to load medical history");
-      setLoading(false);
-    }
-  };
-
-  const handlePatientAdded = () => {
-    fetchPatients();
-  };
-
-  const handlePrescriptionCreated = () => {
-    toast.success("Prescription created successfully");
-  };
-
-  const filteredHistory = medicalHistory.filter(record =>
-    record.patients?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredHistory = mockMedicalHistory.filter(record =>
+    record.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.diagnosis.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -154,7 +97,10 @@ const DoctorDashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">Doctor Dashboard</h1>
             <p className="text-muted-foreground">Patient Management System</p>
           </div>
-          <AddPatientDialog onPatientAdded={handlePatientAdded} />
+          <Button variant="default" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add New Patient
+          </Button>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
@@ -207,7 +153,7 @@ const DoctorDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {patients.map((patient) => (
+                  {mockPatients.map((patient) => (
                     <div key={patient.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center space-x-4">
                         <Avatar>
@@ -215,13 +161,13 @@ const DoctorDashboard = () => {
                         </Avatar>
                         <div>
                           <h4 className="font-medium">{patient.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Age: {patient.age} • ID: {patient.patient_id}
-                          </p>
+                          <p className="text-sm text-muted-foreground">Age: {patient.age} • Last Visit: {patient.lastVisit}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge variant="default">Active</Badge>
+                        <Badge variant={patient.status === 'Active' ? 'default' : patient.status === 'Completed' ? 'secondary' : 'outline'}>
+                          {patient.status}
+                        </Badge>
                         <Button variant="outline" size="sm">View</Button>
                       </div>
                     </div>
@@ -315,51 +261,41 @@ const DoctorDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {loading ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">Loading medical history...</p>
-                    </div>
-                  ) : filteredHistory.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">No medical history records found.</p>
-                    </div>
-                  ) : (
-                    filteredHistory.map((record) => (
-                      <div key={record.id} className="border rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-semibold text-lg">{record.patients?.name}</h4>
-                            <p className="text-sm text-muted-foreground">Patient ID: {record.patients?.patient_id}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">{new Date(record.visit_date).toLocaleDateString()}</p>
-                            <Badge variant="outline">{record.visit_type}</Badge>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <h5 className="font-medium text-sm text-muted-foreground">DIAGNOSIS</h5>
-                            <p className="text-sm">{record.diagnosis}</p>
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-sm text-muted-foreground">TREATMENT</h5>
-                            <p className="text-sm">{record.treatment || "N/A"}</p>
-                          </div>
-                        </div>
-                        
+                  {filteredHistory.map((record) => (
+                    <div key={record.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
                         <div>
-                          <h5 className="font-medium text-sm text-muted-foreground">CLINICAL NOTES</h5>
-                          <p className="text-sm">{record.notes || "No notes available"}</p>
+                          <h4 className="font-semibold text-lg">{record.patientName}</h4>
+                          <p className="text-sm text-muted-foreground">Patient ID: {record.patientId}</p>
                         </div>
-                        
-                        <div className="flex gap-2 pt-2">
-                          <Button variant="outline" size="sm">Update Record</Button>
-                          <CreatePrescriptionDialog onPrescriptionCreated={handlePrescriptionCreated} />
+                        <div className="text-right">
+                          <p className="font-medium">{record.visitDate}</p>
+                          <Badge variant="outline">{record.visitType}</Badge>
                         </div>
                       </div>
-                    ))
-                  )}
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h5 className="font-medium text-sm text-muted-foreground">DIAGNOSIS</h5>
+                          <p className="text-sm">{record.diagnosis}</p>
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-sm text-muted-foreground">TREATMENT</h5>
+                          <p className="text-sm">{record.treatment}</p>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h5 className="font-medium text-sm text-muted-foreground">CLINICAL NOTES</h5>
+                        <p className="text-sm">{record.notes}</p>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-2">
+                        <Button variant="outline" size="sm">Update Record</Button>
+                        <Button variant="outline" size="sm">Create Prescription</Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
