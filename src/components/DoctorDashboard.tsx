@@ -5,7 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, User, FileText, Calendar, Plus, Stethoscope, Clock, Phone, Mail } from "lucide-react";
+import { Search, User, FileText, Calendar, Stethoscope, Clock, Phone, Mail } from "lucide-react";
+import { AddPatientDialog } from "@/components/AddPatientDialog";
+import { CreatePrescriptionDialog } from "@/components/CreatePrescriptionDialog";
+import { UpdateRecordDialog } from "@/components/UpdateRecordDialog";
+import { ViewPatientDialog } from "@/components/ViewPatientDialog";
 
 // Mock data
 const doctorProfile = {
@@ -97,10 +101,7 @@ const DoctorDashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">Doctor Dashboard</h1>
             <p className="text-muted-foreground">Patient Management System</p>
           </div>
-          <Button variant="default" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add New Patient
-          </Button>
+          <AddPatientDialog />
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
@@ -168,7 +169,7 @@ const DoctorDashboard = () => {
                         <Badge variant={patient.status === 'Active' ? 'default' : patient.status === 'Completed' ? 'secondary' : 'outline'}>
                           {patient.status}
                         </Badge>
-                        <Button variant="outline" size="sm">View</Button>
+                        <ViewPatientDialog patientId={patient.id} />
                       </div>
                     </div>
                   ))}
@@ -291,8 +292,21 @@ const DoctorDashboard = () => {
                       </div>
                       
                       <div className="flex gap-2 pt-2">
-                        <Button variant="outline" size="sm">Update Record</Button>
-                        <Button variant="outline" size="sm">Create Prescription</Button>
+                        <UpdateRecordDialog
+                          recordId={record.id}
+                          patientId={record.patientId}
+                          patientName={record.patientName}
+                          currentData={{
+                            diagnosis: record.diagnosis,
+                            treatment: record.treatment,
+                            visitType: record.visitType,
+                            notes: record.notes
+                          }}
+                        />
+                        <CreatePrescriptionDialog
+                          medicalHistoryId={record.id}
+                          patientId={record.patientId}
+                        />
                       </div>
                     </div>
                   ))}
